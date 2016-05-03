@@ -485,14 +485,11 @@ function getPostInfo(bot, message, postID) {
 
     httpGet(url)
         .then(function(response) {
-
             post = response.post;
-
             // Intro
             return sendPostInfo_intro(bot, message, post);
         })
         .then(function() {
-
             // Number of Votes
             return  sendPostInfo_votes(bot, message, post);
         })
@@ -502,43 +499,34 @@ function getPostInfo(bot, message, postID) {
             if ( post.makers.length > 0 )  {
                 return sendPostInfo_makerInfo(bot, message, post)
             } else {
-
                 // If no maker found
                 return new Promise(function(resolve, reject) {
-
                     bot.reply(message, "Looks like none of the makers have been identified yet", function(err, response) {
                         if (err) reject(err)
                         resolve()
                     });
                 });
-
             }
 
         })
         .then(function() {
-
             // Maker - Message
             if ( post.makers.length > 0 )  {
                 return sendPostInfo_makerMessage(bot, message, post)
             } else {
                 return true;
             }
-
         })
         .then(function() {
-
             // Media
             return sendPostInfo_media(bot, message, post)
-
         })
         .then(function() {
-            
-            // Media
+            // CTA
             return sendPostInfo_CTA(bot, message, post);
-
         })
         .catch(function(err) {
-            console.log("Error", err);
+            handleError(bot, message, err);
         })
 
 }
@@ -654,7 +642,7 @@ var help_listCommands = function(bot, message) {
 
 /****  KEYWORDS ************************/
 
-controller.hears(['hello', 'hi'], 'message_received', function (bot, message) {
+controller.hears(['hello', 'hi', 'hey'], 'message_received', function (bot, message) {
     var reply = "Hi there! I have some hunts for you";
     bot.reply(message, reply, function(err, response) {
         if (err) handleError(bot, message, err);
@@ -666,14 +654,13 @@ controller.hears(['category', 'categories'], 'message_received', function (bot, 
     chooseCategoryPrompt(bot, message);
 })
 
-controller.hears(['help'], 'message_received', function (bot, message) {
+controller.hears(['help', 'error'], 'message_received', function (bot, message) {
     var reply = "Looks like you need help";
     bot.reply(message, reply, function(err, response) {
         if (err) handleError(bot, message, err);
         help_init(bot, message);
     });
 })
-
 
 
 controller.hears(['tech', 'technology'], 'message_received', function (bot, message) {
