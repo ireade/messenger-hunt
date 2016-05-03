@@ -45,28 +45,50 @@ PHAccessToken = "?access_token=" + PHAccessToken
 ***************************** */
 
 
-var httpGet = function(url, callback) {
-    https.get(url, function(res) {
+var httpGet = function(url) {
+    return new Promise(function(resolve, reject) {
 
-        var body = '';
+        https.get(url, function(res) {
 
-        res.on('data', function(data) {
-            data = data.toString();
-            body += data;
+            var body = '';
+
+            res.on('data', function(data) {
+                data = data.toString();
+                body += data;
+            });
+
+            res.on('end', function() {
+                body = JSON.parse(body);
+                var stories = body;
+                resolve(stories);
+            });
+
+        }).on('error', function(err) {
+            reject(err)
         });
 
-        res.on('end', function() {
-            body = JSON.parse(body);
-            var stories = body;
-            callback(stories);
-        });
-
-    }).on('error', function(err) {
-        callback(null, err)
-    });
+    })
 }
 
 
+var handleError = function(bot, message, err) {
+
+    console.log(err);
+
+    var reply = "Oops! Looks like there was an error. Here are the details..";
+
+    bot.reply(message, reply, function(err, response) {
+
+        bot.reply(message, err, function(err, response) {
+
+            var reply = "Email ire@ireaderinokun to report this bug."
+            bot.reply(message, reply);
+
+        });
+
+    });
+
+}
 
 
 /* *****************************
@@ -209,34 +231,39 @@ function getHunts(bot, message, url) {
 
     bot.reply(message, "Fetching hunts in the " +category+ " category..");
 
-    httpGet(url, function(response) {
 
-        var hunts = response.posts;
+    httpGet(url)
+        .then(function(response) {
 
-        var elements = [];
+            var hunts = response.posts;
 
-        for ( var i = 0; i < 9; i++ ) {
+            var elements = [];
 
-            if ( hunts[i] ) {
-                var post = setupPostAttachment( hunts[i] );
-                elements.push(post);
-            } else {
-                break;
+            for ( var i = 0; i < 9; i++ ) {
+
+                if ( hunts[i] ) {
+                    var post = setupPostAttachment( hunts[i] );
+                    elements.push(post);
+                } else {
+                    break;
+                }
+                
             }
             
-        }
-        
-        bot.reply(message, {
-            attachment: {
-              type: 'template',
-              payload: {
-                template_type: 'generic',
-                elements: elements
-              }
-            }
-        })
+            bot.reply(message, {
+                attachment: {
+                  type: 'template',
+                  payload: {
+                    template_type: 'generic',
+                    elements: elements
+                  }
+                }
+            })
 
-    })
+        })
+        .catch(function(err) {
+            handleError(bot, message, err);
+        })
 
 }
 
@@ -454,64 +481,66 @@ function getPostInfo(bot, message, postID) {
 
     var url = "https://api.producthunt.com/v1/posts/"+postID+PHAccessToken;
 
-    httpGet(url, function(response) {
+    var post;
 
-        var post = response.post;
+    httpGet(url)
+        .then(function(response) {
 
+            post = response.post;
 
-         sendPostInfo_intro(bot, message, post)
-            .then(function() {
+            // Intro
+            return sendPostInfo_intro(bot, message, post);
+        })
+        .then(function() {
 
-                // Number of Votes
-                return  sendPostInfo_votes(bot, message, post);
-            })
-            .then(function() {
+            // Number of Votes
+            return  sendPostInfo_votes(bot, message, post);
+        })
+        .then(function() {
 
-                // Maker - Information
-                if ( post.makers.length > 0 )  {
-                    return sendPostInfo_makerInfo(bot, message, post)
-                } else {
+            // Maker - Information
+            if ( post.makers.length > 0 )  {
+                return sendPostInfo_makerInfo(bot, message, post)
+            } else {
 
-                    // If no maker found
-                    return new Promise(function(resolve, reject) {
+                // If no maker found
+                return new Promise(function(resolve, reject) {
 
-                        bot.reply(message, "Looks like none of the makers have been identified yet", function(err, response) {
-                            if (err) reject(err)
-                            resolve()
-                        });
+                    bot.reply(message, "Looks like none of the makers have been identified yet", function(err, response) {
+                        if (err) reject(err)
+                        resolve()
                     });
+                });
 
-                }
+            }
 
-            })
-            .then(function() {
+        })
+        .then(function() {
 
-                // Maker - Message
-                if ( post.makers.length > 0 )  {
-                    return sendPostInfo_makerMessage(bot, message, post)
-                } else {
-                    return true;
-                }
+            // Maker - Message
+            if ( post.makers.length > 0 )  {
+                return sendPostInfo_makerMessage(bot, message, post)
+            } else {
+                return true;
+            }
 
-            })
-            .then(function() {
+        })
+        .then(function() {
 
-                // Media
-                return sendPostInfo_media(bot, message, post)
+            // Media
+            return sendPostInfo_media(bot, message, post)
 
-            })
-            .then(function() {
-                
-                // Media
-                return sendPostInfo_CTA(bot, message, post);
+        })
+        .then(function() {
+            
+            // Media
+            return sendPostInfo_CTA(bot, message, post);
 
-            })
-            .catch(function(err) {
-                console.log("Error", err);
-            })
+        })
+        .catch(function(err) {
+            console.log("Error", err);
+        })
 
-
-    }) // End http get
 }
 
 
@@ -536,7 +565,7 @@ var help_init = function(bot, message) {
                 {
                     "title": "Messenger Hunt",
                     "subtitle": "Some help using this bot",
-                    "image_url": "https://raw.githubusercontent.com/ireade/khaledbot-fb/master/assets/ph-kitten.png",
+                    "image_url": "https://raw.githubusercontent.com/ireade/messenger-hunt/master/assets/mh-logo.png",
                     "buttons":[
                         {
                             "type":"postback",
@@ -570,7 +599,7 @@ var help_init = function(bot, message) {
                 {
                     "title": "Product Hunt",
                     "subtitle": "Product Hunt surfaces the best new products, every day.",
-                    "image_url": "https://raw.githubusercontent.com/ireade/khaledbot-fb/master/assets/ph-logo.png",
+                    "image_url": "https://raw.githubusercontent.com/ireade/messenger-hunt/master/assets/ph-logo.png",
                     "buttons":[
                         {
                             "type":"web_url",
@@ -587,7 +616,7 @@ var help_init = function(bot, message) {
 
 
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
+        if (err) handleError(bot, message, err);
     })
 
 }
@@ -597,14 +626,13 @@ var help_listCommands = function(bot, message) {
 
     var reply = "Here are some keywords you can use with me.."
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
-
+        if (err) handleError(bot, message, err);
 
         bot.reply(message, 'Say "categories" to fetch the list of categories to choose from');
 
         bot.reply(message, 'Say a category name, for example "tech" to see the latest hunts from that category');
 
-        //bot.reply(message, 'Say "" to ');
+        bot.reply(message, 'Or just say "hi" to start a conversation');
 
     })
 
@@ -629,7 +657,7 @@ var help_listCommands = function(bot, message) {
 controller.hears(['hello', 'hi'], 'message_received', function (bot, message) {
     var reply = "Hi there! I have some hunts for you";
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
+        if (err) handleError(bot, message, err);
         chooseCategoryPrompt(bot, message);
     });
 })
@@ -641,7 +669,7 @@ controller.hears(['category', 'categories'], 'message_received', function (bot, 
 controller.hears(['help'], 'message_received', function (bot, message) {
     var reply = "Looks like you need help";
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
+        if (err) handleError(bot, message, err);
         help_init(bot, message);
     });
 })
@@ -695,7 +723,7 @@ controller.on('facebook_postback', function (bot, message) {
             case 'reportError':
                 var reply = "Email ire@ireaderinokun.com";
                 bot.reply(message, reply, function(err, response) {
-                    if (err) console.log(err)
+                    if (err) handleError(bot, message, err);
                 });
                 break
         }
@@ -714,7 +742,7 @@ controller.on('facebook_postback', function (bot, message) {
 controller.on('facebook_optin', function (bot, message) {
     var reply = "Welcome! I have some hunts for you";
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
+        if (err) handleError(bot, message, err);
         chooseCategoryPrompt(bot, message);
     });
 
