@@ -252,33 +252,37 @@ function getHunts(bot, message, url) {
 
 
 var sendPostInfo_intro = function(bot, message, post) {
-    return new Promise(function(resolve, reject) {
+return new Promise(function(resolve, reject) {
 
-        var reply = 'Some more information about "'+post.name+'"';
+    var reply = 'Some more information about "'+post.name+'"';
 
-        bot.reply(message, reply, function(err, response) {
-            if (err) reject(err)
-            resolve()
-        })
+    bot.reply(message, reply, function(err, response) {
+        if (err) reject(err)
+        resolve()
+    })
 
-    }) 
+}) 
 }
 
 
-var sendPostInfo_votes = function(bot, message, post, callback) {
+var sendPostInfo_votes = function(bot, message, post) {
+return new Promise(function(resolve, reject) {
 
-    var reaction = "! 🙃";
+    var reaction = "!";
 
     var reply = "It has "+post.votes_count+" votes" + reaction;
 
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
-        callback(true)
+        if (err) reject(err)
+        resolve()
     })
+}) 
 }
 
 
-var sendPostInfo_makerInfo = function(bot, message, post, callback) {
+var sendPostInfo_makerInfo = function(bot, message, post) {
+return new Promise(function(resolve, reject) {
+
     var number_of_makers = post.makers.length;
 
     var replyNOM = "There was 1 maker identified, here's some more information on them"
@@ -319,13 +323,15 @@ var sendPostInfo_makerInfo = function(bot, message, post, callback) {
     }
 
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
-        callback(true)
+        if (err) reject(err)
+        resolve()
     });
+}) 
 }
 
 
-var sendPostInfo_makerMessage = function(bot, message, post, callback) {
+var sendPostInfo_makerMessage = function(bot, message, post) {
+return new Promise(function(resolve, reject) {
 
     var number_of_comments = post.comments.length;
 
@@ -351,16 +357,20 @@ var sendPostInfo_makerMessage = function(bot, message, post, callback) {
 
 
             bot.reply(message, reply, function(err, response) {
-                if (err) console.log(err)
-                callback(true)
+                if (err) reject(err)
+                resolve()
             });
 
-        } else { callback(true) }
-    } else { callback(true) }
+        } else { resolve() }
+    } else { resolve() }
+
+})
 }
 
 
-var sendPostInfo_media = function(bot, message, post, callback) {
+var sendPostInfo_media = function(bot, message, post) {
+return new Promise(function(resolve, reject) {
+
    var number_of_media = post.media.length;
     if ( number_of_media > 0 ) {
 
@@ -391,18 +401,21 @@ var sendPostInfo_media = function(bot, message, post, callback) {
                     }
                 }
                 bot.reply(message, reply, function(err, response) {
-                    if (err) console.log(err)
-                    callback(true)
+                    if (err) reject(err)
+                    resolve()
                 });
             })
 
-        } else { callback(true) }
-    } else { callback(true) }
+        } else { resolve() }
+    } else { resolve() }
+
+})
 }
 
 
 
 var sendPostInfo_CTA = function(bot, message, post) {
+return new Promise(function(resolve, reject) {
 
     var reply = {
         attachment: {
@@ -427,8 +440,11 @@ var sendPostInfo_CTA = function(bot, message, post) {
     }
 
     bot.reply(message, reply, function(err, response) {
-        if (err) console.log(err)
-    })
+        if (err) reject(err)
+        resolve()
+    });
+
+})
 }
 
 
@@ -442,53 +458,58 @@ function getPostInfo(bot, message, postID) {
 
         var post = response.post;
 
-        // Introduction
-        sendPostInfo_intro(bot, message, post)
+
+         sendPostInfo_intro(bot, message, post)
             .then(function() {
 
                 // Number of Votes
-                sendPostInfo_votes(bot, message, post, function(response) {
+                return  sendPostInfo_votes(bot, message, post);
+            })
+            .then(function() {
 
-                    // Maker
-                    if ( post.makers.length > 0 ) {
+                // Maker - Information
+                if ( post.makers.length > 0 )  {
+                    return sendPostInfo_makerInfo(bot, message, post)
+                } else {
 
-                        // Maker - Information
-                        sendPostInfo_makerInfo(bot, message, post, function(response) {
-                            
-                            // Maker - Message
-                            sendPostInfo_makerMessage(bot, message, post, function(response) {
-
-                                // Media
-                                sendPostInfo_media(bot, message, post, function(response) {
-
-                                    sendPostInfo_CTA(bot, message, post);
-
-                                })
-
-                            })
-                        })
-
-                    } else {
+                    // If no maker found
+                    return new Promise(function(resolve, reject) {
 
                         bot.reply(message, "Looks like none of the makers have been identified yet", function(err, response) {
-                            if (err) console.log(err)
-
-                            // Media
-                            sendPostInfo_media(bot, message, post, function(response) {
-
-                                sendPostInfo_CTA(bot, message, post);
-
-                            })
+                            if (err) reject(err)
+                            resolve()
                         });
-                    }
+                    });
 
-                })
+                }
 
+            })
+            .then(function() {
 
-            }) // END!
+                // Maker - Message
+                if ( post.makers.length > 0 )  {
+                    return sendPostInfo_makerMessage(bot, message, post)
+                } else {
+                    return true;
+                }
+
+            })
+            .then(function() {
+
+                // Media
+                return sendPostInfo_media(bot, message, post)
+
+            })
+            .then(function() {
+                
+                // Media
+                return sendPostInfo_CTA(bot, message, post);
+
+            })
             .catch(function(err) {
                 console.log("Error", err);
             })
+
 
     }) // End http get
 }
