@@ -208,7 +208,7 @@ var setupPostAttachment = function(post) {
 		  {
 			"type":"web_url",
 			"url": post.redirect_url,
-			"title":"Hunt This"
+			"title":"Get It"
 		  },
 		  {
 			"type":"web_url",
@@ -454,7 +454,7 @@ return new Promise(function(resolve, reject) {
 					{
 						"type":"web_url",
 						"url": post.redirect_url,
-						"title":"Hunt This"
+						"title":"Get It"
 					},
 					{
 						"type":"web_url",
