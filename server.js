@@ -734,11 +734,3 @@ controller.on('facebook_optin', function (bot, message) {
 	});
 
 });
-
-
-controller.on('message_received', function (bot, message) {
-	bot.reply(message, "Sorry, I didn't get that. Say 'help' if you need some help");
-
-});
-
-
